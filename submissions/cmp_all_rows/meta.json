@@ -1,0 +1,14 @@
+{
+  "experiment": "baseline",
+  "created_at": "2026-11-22T01:32:22.239973+00:00",
+  "submission_path": "submissions\\cmp_all_rows\\submission.csv",
+  "submission_sha256": "2ced18484937956b3a743059683d173da7099ff2869e6d2aa2f85be06680457b",
+  "model_path": "submissions\\cmp_all_rows\\artifacts\\tfidf_logreg.joblib",
+  "train_rows": "all",
+  "seed": 42,
+  "hyperparams": {
+    "max_features": 80000,
+    "C": 2.0,
+    "max_iter": 300
+  }
+}

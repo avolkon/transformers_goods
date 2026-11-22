@@ -1,0 +1,151 @@
+{
+  "created_at": "2026-11-22T02:00:17.533900+00:00",
+  "best": {
+    "name": "svc_c1_unique",
+    "clf_name": "linearsvc",
+    "train_rows": "unique_text",
+    "max_features": 120000,
+    "max_features_char": 150000,
+    "ngram_word": [
+      1,
+      2
+    ],
+    "char_ngram": [
+      2,
+      6
+    ],
+    "min_df": 1,
+    "C": 1.0,
+    "max_iter": 4000,
+    "holdout_macro_f1": 0.56692045182343,
+    "seconds": 16.7
+  },
+  "ranked": [
+    {
+      "name": "svc_c1_unique",
+      "clf_name": "linearsvc",
+      "train_rows": "unique_text",
+      "max_features": 120000,
+      "max_features_char": 150000,
+      "ngram_word": [
+        1,
+        2
+      ],
+      "char_ngram": [
+        2,
+        6
+      ],
+      "min_df": 1,
+      "C": 1.0,
+      "max_iter": 4000,
+      "holdout_macro_f1": 0.56692045182343,
+      "seconds": 16.7
+    },
+    {
+      "name": "svc_word3_unique",
+      "clf_name": "linearsvc",
+      "train_rows": "unique_text",
+      "max_features": 150000,
+      "max_features_char": 150000,
+      "ngram_word": [
+        1,
+        3
+      ],
+      "char_ngram": [
+        3,
+        5
+      ],
+      "min_df": 1,
+      "C": 1.0,
+      "max_iter": 4000,
+      "holdout_macro_f1": 0.5589933979314868,
+      "seconds": 5.1
+    },
+    {
+      "name": "ridge_unique",
+      "clf_name": "ridge",
+      "train_rows": "unique_text",
+      "max_features": 120000,
+      "max_features_char": 120000,
+      "ngram_word": [
+        1,
+        2
+      ],
+      "char_ngram": [
+        2,
+        6
+      ],
+      "min_df": 1,
+      "alpha": 0.5,
+      "max_iter": 1,
+      "C": 1.0,
+      "holdout_macro_f1": 0.5582199582536005,
+      "seconds": 27.4
+    },
+    {
+      "name": "baseline_logreg",
+      "clf_name": "logreg",
+      "train_rows": "unique_text",
+      "max_features": 80000,
+      "max_features_char": 80000,
+      "ngram_word": [
+        1,
+        2
+      ],
+      "char_ngram": [
+        3,
+        5
+      ],
+      "min_df": 2,
+      "C": 2.0,
+      "max_iter": 300,
+      "holdout_macro_f1": 0.5193083396635988,
+      "seconds": 40.8
+    },
+    {
+      "name": "sgd_all",
+      "clf_name": "sgd",
+      "train_rows": "all",
+      "max_features": 120000,
+      "max_features_char": 150000,
+      "ngram_word": [
+        1,
+        2
+      ],
+      "char_ngram": [
+        2,
+        6
+      ],
+      "min_df": 1,
+      "alpha": 1e-05,
+      "max_iter": 40,
+      "C": 1.0,
+      "holdout_macro_f1": 0.40387248024098116,
+      "seconds": 23.9
+    },
+    {
+      "name": "svc_c2_all",
+      "clf_name": "linearsvc",
+      "train_rows": "all",
+      "max_features": 120000,
+      "max_features_char": 150000,
+      "ngram_word": [
+        1,
+        2
+      ],
+      "char_ngram": [
+        2,
+        6
+      ],
+      "min_df": 1,
+      "C": 2.0,
+      "max_iter": 4000,
+      "holdout_macro_f1": 0.39753941374336543,
+      "seconds": 70.9
+    }
+  ],
+  "fit_seconds": 10.76,
+  "submission_sha256": "b7db398341776d723ac6a771f95fb6dcf60b37abdf967168d68650e505319604",
+  "n_changed_vs_baseline": 112,
+  "agree_vs_baseline": 0.9452590420332356
+}

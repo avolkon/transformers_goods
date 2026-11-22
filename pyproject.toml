@@ -1,0 +1,26 @@
+[project]
+name = "transformers-goods"
+version = "0.1.0"
+description = "MEPhI product title subject detection"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "accelerate>=0.33",
+    "datasets>=2.20",
+    "joblib>=1.4",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scikit-learn>=1.5",
+    "scipy>=1.11",
+    "torch>=2.2",
+    "transformers>=4.44",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]

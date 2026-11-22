@@ -1,0 +1,10 @@
+{
+  "legacy_exists": true,
+  "all_rows_cv_mean": 0.4741245101290839,
+  "unique_text_cv_mean": 0.4741245101290839,
+  "test_prediction_agreement": 0.967741935483871,
+  "fit_seconds_all": 115.98,
+  "fit_seconds_unique": 50.0,
+  "legacy_vs_unique_agreement": 1.0,
+  "legacy_vs_all_agreement": 0.967741935483871
+}

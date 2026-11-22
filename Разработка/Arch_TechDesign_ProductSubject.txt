@@ -1,0 +1,471 @@
+# Архитектурная спецификация проекта (Технический дизайн)
+
+**Проект:** MEPhI Product Title Subject Detection — NLP-пайплайн многоклассовой классификации русских названий товаров  
+**Версия:** 1.0  
+**Статус:** Утверждена (архитектурная проработка)  
+**Источники:** `Разработка/ТЗ1_товары.md`, `Разработка/Правила_CompetitionRules.txt`, шаблон `Arch_TechDesign_PreditCure.txt`  
+**Данные (локально):** `data/train.csv`, `data/test.csv`, `data/sample_submission.csv`  
+**Соревнование:** [mephi-product-title-subject-detection](https://www.kaggle.com/competitions/mephi-product-title-subject-detection)
+
+Документ описывает целевую архитектуру решения для курсового соревнования Kaggle и задания Яндекс Практикума: предсказание поля `subject` по тексту названия `text`. Учтены требования к воспроизводимости, обязательному Kaggle Notebook, метрике F1-macro, ограничениям на внешние данные и ИИ.
+
+---
+
+## Ревью навыков агента для архитектурной проработки
+
+| Скилл | Нужен для этой задачи? | Роль |
+|-------|------------------------|------|
+| **(нет обязательных)** | Достаточно ТЗ, правил и шаблона | Техдизайн — это документ и инженерные решения, не установка skills.sh |
+| **`/create-rule`** | Рекомендуется **после** утверждения ТД | Зафиксировать инварианты (F1-macro, запрет LLM на test, структура notebook) в `.cursor/rules/` |
+| **`/create-skill`** | Опционально на этапе реализации | Проектный скилл `product-subject-pipeline` (чеклист EDA → baseline → encoder → submit) |
+| **`/visualize`** | Опционально | Mermaid/схемы пайплайна в README или в ноутбуке |
+| **`/review-bugbot`**, **`/review-security`** | На этапе кода | Утечки train→test, секреты в notebook, недопустимые API |
+| **skills.sh (Vercel)** | **Не нужен** | Нет релевантных готовых скиллов под ruBERT + Kaggle course |
+
+**Вывод:** для архитектуры достаточно текущего контекста; при разработке полезны **`create-rule`** и **`create-skill`**, не каталог внешних скиллов.
+
+---
+
+## Согласованные архитектурные решения
+
+| Пункт / обсуждение | Утверждённая реализация | Обоснование |
+|-------------------|--------------------------|-------------|
+| Двойной артефакт сдачи | **Kaggle Notebook** (зачёт курса) + **CSV submission**; локальный репозиторий — источник воспроизводимости | Правила: без notebook с воспроизводимым submit зачёт по LB может быть нулевым |
+| Метрика | **F1-macro** (`average="macro"`, `zero_division=0`) | Совпадает с Kaggle `kaggle_metric.py` и ТЗ |
+| Пространство классов | Предсказание **только** из множества `subject`, встречающихся в `train.csv` | Тест не содержит новых меток; в локальных данных **341** уникальный класс (в ТЗ фигурирует также **371** — зафиксировать фактическое число при каждой загрузке данных) |
+| Разделение train/val | **GroupKFold по нормализованному `text`** (одна группа = один уникальный title) | В train **23 563** строк-дубликатов названия при **~7 1xx** уникальных текстов; построчный split даёт утечку |
+| Baseline | **TF-IDF (word + char n-grams)** + **LogisticRegression** / **LinearSVC (calibrated)** | Требование ТЗ/Kaggle: линейная модель на TF-IDF достаточна для допустимого submit |
+| Целевая модель | Предобученный **русскоязычный encoder** (Hugging Face): приоритет `cointegrated/rubert-tiny2`, fallback `ai-forever/ruBert-base`, `deepvk/USER-bge-m3` (embedding + linear head) | Ожидаемый уровень курса «трансформеры»; разрешены HF-модели по правилам |
+| Редкие классы | **140** классов с единственным примером в train (на момент локальной проверки) | F1-macro штрафует промахи по редким классам → class weights, weighted loss, без undersampling majority |
+| Текстовая нормализация | Лёгкая: lower, `ё→е`, схлопывание пробелов; **без** лемматизации по умолчанию | Короткие названия (медиана длины **16** символов); агрессивная морфология может терять сигнал |
+| Запрещённые подходы | Нет ручной/LLM-разметки test; нет prod-классификатора Naitii; нет платных private API на каталог | `Правила_CompetitionRules.txt`, Overview |
+| Инструменты репозитория | **`uv`**, **`ruff`**, **`pytest`** (для `src/`), **Jupyter** / Kaggle kernel | Согласовано со шаблоном PredicCure; notebook — среда сдачи |
+| Структура кода | Пакет `src/` (переиспользуемые модули) + `notebooks/` (EDA, Kaggle-экспорт) | Логика в `src/`, notebook тонкий orchestration layer |
+
+---
+
+## Общая архитектура
+
+### 1. Контракты между компонентами
+
+#### Контракт Data Loader → EDA / Training
+
+```python
+# Интерфейс загрузки данных (pandas)
+interface DataLoader:
+    def load_train() -> pd.DataFrame   # колонки: id, text, subject
+    def load_test() -> pd.DataFrame    # колонки: id, text
+    def load_sample() -> pd.DataFrame  # id, subject (шаблон сдачи)
+    def get_label_space() -> list[str] # sorted unique subject из train
+```
+
+**Обязательные правила:**
+- Загрузчик не меняет семантику полей; возвращает копии.
+- Проверка: нет пересечения множества `text` между train и test (должно быть 0).
+- Логирование: число строк, число классов, число unique text, число singleton-классов.
+
+#### Контракт TextPreprocessor → FeatureBuilder / Tokenizer
+
+```python
+interface TextPreprocessor:
+    def fit(df: pd.DataFrame) -> None          # опционально: словарь опечаток, частотности
+    def transform(texts: Iterable[str]) -> list[str]
+```
+
+**Обязательные правила:**
+- Одинаковые правила для train, val и test.
+- Не использовать таргет `subject` в transform.
+- Сохраняемый артефакт: `artifacts/text_preprocessor.pkl` или JSON-конфиг.
+
+#### Контракт FeatureBuilder (TF-IDF ветка)
+
+```python
+interface TfidfFeatureBuilder:
+    def fit(texts: list[str], y: np.ndarray | None) -> None
+    def transform(texts: list[str]) -> sparse matrix
+    def save(path) / load(path)
+```
+
+**Обязательные правила:**
+- `fit` только на train fold / полном train.
+- Комбинация word (1–2) и char (3–5) n-grams — конфигурируемо.
+- `max_features`, `min_df` задаются в `Config`.
+
+#### Контракт EncoderModel (Transformer ветка)
+
+```python
+interface EncoderClassifier:
+    def fit(train_loader, val_loader, label2id: dict) -> None
+    def predict(texts: list[str]) -> list[str]   # строки subject
+    def predict_proba(texts) -> np.ndarray     # optional
+    def save(path) / load(path)
+```
+
+**Обязательные правила:**
+- Токенизация через `AutoTokenizer` той же модели.
+- `max_length` (например 64–128) с truncation; padding batch.
+- Loss: `CrossEntropyLoss` с `weight` по частоте классов (inverse freq или effective number).
+- Early stopping по **macro-F1** на validation (не accuracy).
+
+#### Контракт Validator → Model Selection
+
+```python
+interface GroupTextKFold:
+    def split(df: pd.DataFrame, n_splits=5) -> Iterable[tuple[np.ndarray, np.ndarray]]
+    # Индексы строк train_df; группировка по hash(normalize(text))
+```
+
+**Обязательные правила:**
+- В одном fold не допускаются две строки с одним и тем же нормализованным `text`.
+- Для стратификации по классу при группировке: **StratifiedGroupKFold** (sklearn ≥1.3) или ручной баланс при assign групп.
+
+#### Контракт Predictor → Submission
+
+```python
+interface SubmissionWriter:
+    def build(test_df: pd.DataFrame, subjects: list[str]) -> pd.DataFrame
+    def validate(submission: pd.DataFrame, test_df, label_space) -> None
+    def write_csv(path: Path) -> None
+```
+
+**Обязательные правила:**
+- Строк ровно столько, сколько в `test.csv`; множество `id` совпадает.
+- Значения `subject` ∈ label_space.
+- Заголовок: `id,subject` (как `sample_submission.csv`).
+
+---
+
+### 2. Диаграмма последовательности (сценарий обучения — encoder)
+
+```text
+DataLoader  TextPreprocessor  GroupTextKFold  EncoderTrainer  Metrics  SubmissionWriter
+    │              │                 │              │             │            │
+    │ load_train() │                 │              │             │            │
+    ├─────────────>│                 │              │             │            │
+    │              │ transform()     │              │             │            │
+    │              ├────────────────>│ split()      │             │            │
+    │              │                 ├─────────────>│             │            │
+    │              │                 │              │ train epochs│            │
+    │              │                 │              ├────────────>│ macro-F1   │
+    │              │                 │              │<────────────┤            │
+    │              │                 │              │ save ckpt   │            │
+    │              │                 │              │             │            │
+    │ (после CV)   │                 │              │ fit full train          │
+    │              │                 │              │             │            │
+    │ load_test()  │                 │              │ predict()   │            │
+    ├─────────────>│─────────────────────────────────────────────┼───────────>│
+    │              │                 │              │             │ write CSV  │
+```
+
+### 3. Схема данных
+
+| Компонент | Хранилище | Данные | TTL / сохранение | Путь |
+|-----------|-----------|--------|------------------|------|
+| Исходные CSV | файлы | train ~31 670×3, test ~2 046×2 | бессрочно | `data/` |
+| Метки | в train | `subject` (строка, кириллица) | — | — |
+| TF-IDF / encoder | joblib, safetensors | векторизаторы, веса | версионируются | `models_saved/` |
+| Label map | JSON | `label2id`, `id2label` | с моделью | `models_saved/label_map.json` |
+| CV отчёт | JSON | F1-macro по fold | per run | `models_saved/cv_metrics.json` |
+| Submission | CSV | id, subject | per submit | `submissions/` |
+| Kaggle Notebook | `.ipynb` на Kaggle | baseline + финальная модель | публикуется | Kaggle kernels |
+
+**Локальная сверка (2026-11-22):** train (31670, 3), test (2046, 2), **341** класс, медиана длины текста 16 символов, **0** конфликтов subject у одного и того же text.
+
+### 4. Протоколы взаимодействия
+
+| A → B | Протокол | Данные |
+|-------|----------|--------|
+| Скрипт ↔ CSV | pandas `read_csv` / `to_csv` | UTF-8 |
+| Notebook → `src` | `import` пакета после `pip install -e .` | Python 3.11+ |
+| Trainer → HF Hub | `transformers` download (публичные веса) | Только разрешённые pretrained |
+| Сабмит → Kaggle | веб UI, ≤5/день, 2 final | CSV + attached notebook |
+
+### 5. Зависимости между эпиками
+
+```text
+Эпик 1: Инфраструктура (uv, структура, config, .gitignore)
+    ↓
+Эпик 2: Загрузка данных, EDA, текстовая нормализация, label encoding
+    ↓
+Эпик 3: Валидация GroupKFold по text + оценка F1-macro
+    ↓
+Эпик 4: Модели — TF-IDF baseline, затем Transformer fine-tune
+    ↓
+Эпик 5: Калибровка/постобработка (маппинг id→subject, проверка label space)
+    ↓
+Эпик 6: Inference на test, submission, синхронизация с Kaggle Notebook
+    ↓
+Эпик 7: Тесты, ruff, README, скриншот LB, чеклист курса Практикума
+```
+
+---
+
+# Эпики
+
+## Эпик 1: Инфраструктура и конфигурация
+
+### Цель
+Создать воспроизводимую структуру репозитория и зависимости для локальной разработки и экспорта в Kaggle.
+
+### Технический дизайн
+1. **Инструменты:** `uv`, `ruff`, `pytest`.
+2. **Структура:** `src/`, `notebooks/`, `models_saved/`, `submissions/`, `tests/`, `artifacts/`.
+3. **Конфигурация:** `src/utils/config.py` (Pydantic Settings или dataclass + `.env`).
+
+### Задача 1.1: Инициализация проекта
+**Acceptance Criteria:**
+- [ ] `pyproject.toml` с именем пакета, Python ≥3.11
+- [ ] Зависимости: `pandas`, `numpy`, `scikit-learn`, `scipy`, `joblib`, `torch`, `transformers`, `datasets`, `accelerate`, `sentencepiece`, `pytest`, `ruff`, `python-dotenv`, `matplotlib`, `seaborn`, `jupyter`
+- [ ] Опционально: `optuna` для подбора TF-IDF/гиперпараметров линейной головы
+
+**Файлы:** `pyproject.toml`, `README.md`, `.gitignore` (исключить `data/*.csv` при необходимости приватности, `models_saved/`, `.env`)
+
+### Задача 1.2: Файловая структура
+**Acceptance Criteria:**
+- [ ] `src/data/`, `src/text/`, `src/features/`, `src/models/`, `src/validation/`, `src/inference/`, `src/utils/`
+- [ ] Все пакеты с `__init__.py`
+
+### Задача 1.3: Конфигурация
+**Acceptance Criteria:**
+- [ ] Поля: `DATA_DIR`, `MODELS_DIR`, `SUBMISSIONS_DIR`, `RANDOM_SEED`, `N_FOLDS`, `BASE_MODEL_NAME`, `MAX_LENGTH`, `BATCH_SIZE`, `EPOCHS`, `LEARNING_RATE`, `USE_TFIDF_BASELINE` (bool)
+- [ ] `.env.example`
+
+---
+
+## Эпик 2: Загрузка данных, EDA и подготовка текста
+
+### Цель
+Понять дисбаланс классов, длину названий, подготовить цепочку нормализации и кодирования меток.
+
+### Задача 2.1: Data loader
+**Acceptance Criteria:**
+- [ ] `load_train`, `load_test`, `load_sample`, `get_label_space`
+- [ ] Assert: пересечение `text` train∩test пусто
+- [ ] Отчёт: top/bottom частоты классов, singleton-классы
+
+**Файлы:** `src/data/loader.py`
+
+### Задача 2.2: EDA (ноутбук)
+**Acceptance Criteria (критерии курса Практикума):**
+- [ ] Распределение классов, long-tail, длина `text` (символы, токены)
+- [ ] Примеры типичных названий на класс (частые классы)
+- [ ] Выводы, влияющие на модель (редкие классы, короткий текст)
+
+**Файлы:** `notebooks/01_eda.ipynb`
+
+### Задача 2.3: Text preprocessor + LabelEncoder
+**Acceptance Criteria:**
+- [ ] `normalize_text(s) -> str`
+- [ ] `LabelEncoder` или dict subject↔id; сохранение `label_map.json`
+- [ ] Тесты на пустую строку и unicode
+
+**Файлы:** `src/text/preprocess.py`, `src/data/labels.py`
+
+---
+
+## Эпик 3: Валидационная стратегия
+
+### Цель
+Честная оценка **F1-macro**, близкая к private LB (30/70 split на Kaggle неизвестен локально).
+
+### Задача 3.1: Group K-Fold по text
+**Acceptance Criteria:**
+- [ ] Сплит по уникальному нормализованному `text`, не по строкам
+- [ ] `n_splits=5`, фиксированный `random_state`
+- [ ] Функция `evaluate_fold(y_true, y_pred) -> f1_macro`
+
+**Файлы:** `src/validation/splitter.py`, `src/validation/metrics.py`
+
+### Задача 3.2: Отчёт CV
+**Acceptance Criteria:**
+- [ ] Среднее и std F1-macro по fold
+- [ ] Confusion matrix / per-class F1 для худших классов (опционально)
+
+**Файлы:** `src/validation/report.py`
+
+---
+
+## Эпик 4: Модели
+
+### Задача 4.1: TF-IDF baseline (обязательный для notebook)
+**Acceptance Criteria:**
+- [ ] `TfidfVectorizer` (word) + опционально `FeatureUnion` с char wb
+- [ ] `LogisticRegression` multi_class='multinomial', `class_weight='balanced'` или веса из частот
+- [ ] End-to-end: обучение → `submissions/baseline_submission.csv` валидного формата
+- [ ] CV macro-F1 залогирован
+
+**Файлы:** `src/features/tfidf.py`, `src/models/linear_baseline.py`
+
+### Задача 4.2: Fine-tune Transformer
+**Acceptance Criteria:**
+- [ ] `AutoModelForSequenceClassification` с `num_labels = n_classes`
+- [ ] Mixed precision при наличии GPU (`fp16`)
+- [ ] Early stopping по val F1-macro
+- [ ] Сохранение: tokenizer + model + config в `models_saved/encoder/`
+
+**Файлы:** `src/models/transformer.py`, `src/models/train_loop.py`
+
+### Задача 4.3: Подбор гиперпараметров (опционально)
+**Acceptance Criteria:**
+- [ ] Optuna на 1–2 fold для `lr`, `max_length`, dropout
+- [ ] Ограничение trials (например ≤30) из-за времени
+
+**Файлы:** `src/models/hyperopt.py`
+
+### Задача 4.4: Сравнение моделей (требование ТЗ Практикума)
+**Acceptance Criteria:**
+- [ ] Таблица: baseline vs encoder, F1-macro OOF/CV
+- [ ] Обоснование выбора финальной модели в notebook
+
+---
+
+## Эпик 5: Постобработка и инварианты сдачи
+
+### Задача 5.1: Декодирование предсказаний
+**Acceptance Criteria:**
+- [ ] `argmax` → `id2label[subject]`
+- [ ] Нет пустых/неизвестных subject
+
+### Задача 5.2: Валидация submission
+**Acceptance Criteria:**
+- [ ] Проверка id, dtypes, отсутствие лишних строк
+- [ ] Юнит-тест на `sample_submission` совместимость размеров
+
+**Файлы:** `src/inference/submission.py`
+
+---
+
+## Эпик 6: Предсказание и Kaggle Notebook
+
+### Задача 6.1: Локальный пайплайн
+**Acceptance Criteria:**
+- [ ] `train_pipeline()` — полное обучение на train, сохранение артефактов
+- [ ] `predict_pipeline()` — test → `submissions/final_submission.csv`
+
+**Файлы:** `src/train.py`, `src/predict.py`, `run_pipeline.py` (`--train`, `--predict`)
+
+### Задача 6.2: Kaggle Notebook (зачёт)
+**Acceptance Criteria (из правил):**
+- [ ] Запуск **сверху вниз** без ручных правок
+- [ ] Загрузка `train.csv` / `test.csv` (Kaggle input path)
+- [ ] Ячейка **baseline** → валидный example submission
+- [ ] Ячейка **финальная модель** → тот же файл, что отправлен на LB
+- [ ] Читаемость: без гигантских логов, без API keys
+- [ ] Копия или `%pip install -e git+...` при использовании `src/` (или инлайн минимальный дубликат baseline)
+
+**Файлы:** `notebooks/kaggle_submit.ipynb` (шаблон для копирования на Kaggle)
+
+### Чеклист Kaggle Notebook (Правила_CompetitionRules.txt, п. 8, строки 20–25)
+
+Чтобы получить **зачёт по курсу**, недостаточно одного CSV на leaderboard. Нужны **оба** артефакта: **Submission (CSV)** и **опубликованный Kaggle Notebook**, привязанный к соревнованию (или kernel, доступный преподавателю).
+
+**Соответствие формулировкам правил:**
+
+| Формулировка правила | Что сделать в notebook |
+|----------------------|-------------------------|
+| *runs top to bottom without manual edits* | После публикации проверить **Cell → Run All** (или «Run all») на чистой сессии: без правок ячеек между запусками, без «догоняющих» ручных `fit` только на одной ячейке. Зафиксировать `random.seed` / `np.random.seed` / `torch.manual_seed`. |
+| *loads train.csv / test.csv* | Явное чтение из input соревнования, например `pd.read_csv("/kaggle/input/mephi-product-title-subject-detection/train.csv")` (путь сверить с Data tab). |
+| *short baseline → valid submission (example submit)* | Отдельный блок **Baseline**: простая модель (минимум TF-IDF + линейный классификатор), обучение на train, предсказание на test, запись **`/kaggle/working/baseline_submission.csv`** с колонками `id,subject` и **2046** строк (как в test). |
+| *actual model → writes the file you submitted* | Следующий блок **Final model**: ваша основная модель (encoder и т.п.), та же схема сдачи. Итоговый файл **`/kaggle/working/submission.csv`** (или одно согласованное имя) должен **совпадать по логике** с файлом, который вы загружаете в **Submit Predictions** на Kaggle (те же id, формат; при полном перезапуске notebook содержимое воспроизводится). В markdown указать: «этот файл соответствует моему сабмиту от ДД.ММ». |
+| *readable (no huge dumped logs, no secrets)* | Короткие `print` / `display`, без `print(df)` на 30k строк; `logging` с уровнем INFO; **без** токенов, API keys, путей к приватным данным. Убрать отладочные ячейки или пометить как optional и не ломающие Run All. |
+
+**Риск при несоблюдении:** если notebook отсутствует или **не воспроизводит** выбранный финальный submit, результат на leaderboard для курса **может быть обнулён**, даже если Kaggle принял CSV (см. тот же файл правил, абзац после п. 8).
+
+**Рекомендуемый порядок ячеек (шаблон):**
+
+1. **Метаданные** — заголовок, соревнование, автор, дата; цель (subject classification, F1-macro).
+2. **Зависимости** — `%pip install …` только то, что нужно; версии пинить при нестабильности.
+3. **Константы** — `SEED`, пути `TRAIN_PATH`, `TEST_PATH`, `BASELINE_OUT`, `SUBMIT_OUT`.
+4. **Загрузка данных** — train, test, sample_submission; assert размеров и колонок.
+5. **Мини-EDA** (кратко) — число классов, длина текста (для отчёта Практикума).
+6. **Baseline (обязательно)** — препроцессинг → fit → predict test → `to_csv(BASELINE_OUT, index=False)` → assert `id` ⊆ test.id.
+7. **Валидация / CV** (по желанию, компактно) — macro-F1 на group split, без огромных матриц в stdout.
+8. **Final model (обязательно)** — обучение → predict → `to_csv(SUBMIT_OUT, index=False)`.
+9. **Проверка submission** — сравнение с `sample_submission` (shape, dtypes, уникальность id, все `subject` из train).
+10. **Итог** — одна ячейка: путь к файлу для скачивания / Submit; напоминание, что этот файл загружен на Kaggle.
+
+**Имена файлов (соглашение проекта):**
+
+| Файл | Назначение |
+|------|------------|
+| `baseline_submission.csv` | Example submit из правил (baseline) |
+| `submission.csv` | Финальный файл для Leaderboard (тот же, что в UI submit) |
+
+**Перед публикацией на Kaggle:**
+
+- [ ] Notebook прикреплён к competition **mephi-product-title-subject-detection**
+- [ ] **Run All** на сервере Kaggle прошёл без ошибок
+- [ ] Output содержит оба CSV в `/kaggle/working/`
+- [ ] Нет секретов в git-истории kernel (Settings → сброс output при необходимости)
+- [ ] Локальная копия: `notebooks/kaggle_submit.ipynb` синхронизирована с опубликованным kernel
+
+### Задача 6.3: Сабмиты Kaggle
+**Acceptance Criteria:**
+- [ ] Не более 5 submits в день; выбраны ≤2 final
+- [ ] Скриншот leaderboard для Практикума
+
+---
+
+## Эпик 7: Качество, тесты, документация
+
+### Задача 7.1: Тесты
+**Acceptance Criteria:**
+- [ ] `test_no_text_leakage_between_splits`
+- [ ] `test_submission_schema`
+- [ ] `test_label_space_closed`
+- [ ] `pytest` для критичных модулей
+
+### Задача 7.2: README и воспроизводимость
+**Acceptance Criteria:**
+- [ ] Описание задачи, метрики, установка `uv sync`
+- [ ] Команды train/predict
+- [ ] Ссылка на competition, дата, private/public split
+- [ ] Указание лицензии данных: **CC BY-NC 4.0** (некоммерческое/учебное); расхождение с MIT в метаданных Kaggle — не полагаться на MIT для внешнего использования
+
+### Задача 7.3: Линтинг
+**Acceptance Criteria:**
+- [ ] `ruff check` / `ruff format` на `src/` и `tests/`
+
+### Задача 7.4: Соответствие критериям Практикума
+**Acceptance Criteria (маппинг):**
+- [ ] EDA с визуализациями и выводами
+- [ ] Несколько моделей + сравнение по F1-macro / confusion analysis
+- [ ] Интерпретация ошибок (худшие классы, примеры misclassification)
+- [ ] Структурированный код, PEP8, функции по этапам
+
+---
+
+## Риски и митигации
+
+| Риск | Митигация |
+|------|-----------|
+| Утечка при CV из-за дубликатов `text` | Group split по text |
+| Низкий macro-F1 из-за singleton-классов | class weights; не удалять редкие классы; анализ ошибок |
+| Notebook не воспроизводит submit | Один источник истины: те же seed, те же веса, assert hash файла |
+| Дисквалификация за LLM на test | Только модель, обученная на train; запрет ручной правки test labels |
+| Различие 341 vs 371 классов в документации | Пересчитывать `n_classes` при загрузке; не хардкодить 371 |
+| Ограничение RAM/ GPU на Kaggle | tiny-BERT, gradient accumulation, меньший batch |
+
+---
+
+## Итоговое архитектурное решение
+
+Архитектура согласована с `ТЗ1_товары.md` и `Правила_CompetitionRules.txt`.
+
+**Обязательные инварианты:**
+
+1. Метрика оптимизации и отчёта — **F1-macro**.
+2. Валидация — **по группам `text`**, не по строкам.
+3. Класс предсказания — **только из train label space**.
+4. Сдача курса — **CSV + воспроизводимый Kaggle Notebook** с baseline и финальной моделью.
+5. Запрещены prod/Naitii классификатор и LLM-разметка test без обученной модели.
+6. Разрешены **публичные HF-модели** и открытые библиотеки.
+7. Код слоистый: **data → text → features/models → validation → inference**.
+8. Зависимости — **`uv`**; локальный запуск и путь в notebook документированы.
+9. Baseline TF-IDF **обязателен** как минимум в notebook.
+10. Перед submit — **валидация схемы** submission.
+
+---
+
+**Статус:** готова к реализации (эпик 1).  
+**Следующий шаг разработки:** `uv init` + скелет `src/` и `notebooks/01_eda.ipynb` без обучения тяжёлой модели до завершения EDA.

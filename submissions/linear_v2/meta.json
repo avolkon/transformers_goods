@@ -1,0 +1,6 @@
+{
+  "experiment": "linear_v2",
+  "best_name": "svc_c1_unique",
+  "holdout_macro_f1": 0.56692045182343,
+  "submission_sha256": "b7db398341776d723ac6a771f95fb6dcf60b37abdf967168d68650e505319604"
+}

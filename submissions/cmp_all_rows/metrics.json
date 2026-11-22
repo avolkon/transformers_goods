@@ -1,0 +1,21 @@
+{
+  "model": "tfidf_logreg",
+  "package_version": "0.1.0",
+  "train_rows": "all",
+  "cv": {
+    "n_splits": 3,
+    "macro_f1_mean": 0.4741245101290839,
+    "macro_f1_std": 0.046707375153913766,
+    "macro_f1_per_fold": [
+      0.46970686813265683,
+      0.41925678892258594,
+      0.533409873332009
+    ],
+    "cv_seconds": 190.96
+  },
+  "fit_seconds": 115.98,
+  "n_train_rows_fit": 31670,
+  "n_train_rows_total": 31670,
+  "n_classes": 341,
+  "submission_sha256": "2ced18484937956b3a743059683d173da7099ff2869e6d2aa2f85be06680457b"
+}

@@ -1,0 +1,13 @@
+{
+  "model": "cointegrated/rubert-tiny2",
+  "preset": "tiny",
+  "package_version": "0.1.0",
+  "train_rows": "unique_text",
+  "train_seconds": 118.67,
+  "submission_sha256": "0aa74c17d00b3d57b10670e450545164b8a68e2e502dc14a2a3396876771afac",
+  "train_loss": 5.706182187063652,
+  "eval_macro_f1": 0.006489549102303987,
+  "eval_loss": 6.057948589324951,
+  "n_train": 7285,
+  "n_val": 810
+}
