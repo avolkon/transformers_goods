@@ -3,7 +3,7 @@
 **Проект:** MEPhI Product Title Subject Detection — NLP-пайплайн многоклассовой классификации русских названий товаров  
 **Версия:** 1.0  
 **Статус:** Утверждена (архитектурная проработка)  
-**Источники:** `Разработка/ТЗ1_товары.md`, `Разработка/Правила_CompetitionRules.txt`, шаблон `Arch_TechDesign_PreditCure.txt`  
+**Источники:** `Разработка/p1/ТЗ1_товары.md`, `Разработка/p1/Правила_CompetitionRules.txt`, шаблон `Arch_TechDesign_PreditCure.txt`  
 **Данные (локально):** `data/train.csv`, `data/test.csv`, `data/sample_submission.csv`  
 **Соревнование:** [mephi-product-title-subject-detection](https://www.kaggle.com/competitions/mephi-product-title-subject-detection)
 
