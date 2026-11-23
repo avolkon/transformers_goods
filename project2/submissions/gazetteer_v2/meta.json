@@ -1,0 +1,53 @@
+{
+  "experiment": "gazetteer_v2",
+  "created_at": "2026-11-22T23:11:42.342267+00:00",
+  "package_version": "0.1.0",
+  "seed": 42,
+  "strict": true,
+  "matcher": {
+    "fields": [
+      "title",
+      "description"
+    ],
+    "casefold": true,
+    "yo_to_e": true,
+    "longest_match": true,
+    "unit_converter": false,
+    "morphology": "vocab stem plus a closed set of Russian endings",
+    "length": "exact token мини/миди/макси",
+    "size_letters": "standalone token, longest first",
+    "size_numbers": "only after a size cue or in parentheses",
+    "one_size_alias": "one size -> OS",
+    "strict": {
+      "os_drops_other_sizes": true,
+      "single_letter_needs_size_context": true,
+      "number_before_cm_is_not_size": true,
+      "size_grid_is_not_setka": true,
+      "barhatistyj_is_not_velvet": true
+    }
+  },
+  "n_rows": 400,
+  "submission_path": "submissions\\gazetteer_v2\\submission.csv",
+  "submission_sha256": "1222295ecd2822d106c7ea797700c81713ce7bcb5611a2c14c4683c7e16e6eb2",
+  "upload_copy": "submission_v2.csv",
+  "nonempty_rate": {
+    "colors": 0.4825,
+    "materials": 0.57,
+    "length": 0.3025,
+    "size": 0.29
+  },
+  "rows_all_slots_empty": 52,
+  "rows_changed_vs_baseline": 37,
+  "slot_rows_changed_vs_baseline": {
+    "colors": 0,
+    "materials": 8,
+    "length": 0,
+    "size": 29
+  },
+  "vocab_sizes": {
+    "colors": 19,
+    "materials": 30,
+    "length": 3,
+    "size": 27
+  }
+}

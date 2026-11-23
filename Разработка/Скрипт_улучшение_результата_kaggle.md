@@ -165,7 +165,7 @@
 
 ## Артефакты прогона анализа
 
-Класть в `submissions/<experiment>/` или `Разработка/Ревью/`:
+Класть в `project1/submissions/<experiment>/` или `Разработка/p1/Ревью/`:
 
 - `meta.json` — модель, seed, SHA CSV;
 - таблица per-class F1;
