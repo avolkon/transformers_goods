@@ -1,0 +1,67 @@
+{
+  "train_rows": 22654,
+  "test_rows": 400,
+  "train_description_empty": 724,
+  "test_description_empty": 6,
+  "title_empty": 0,
+  "title_len": {
+    "0.5": 20.0,
+    "0.95": 51.0,
+    "0.99": 66.0
+  },
+  "description_len": {
+    "0.5": 153.0,
+    "0.95": 873.3,
+    "0.99": 1344.5
+  },
+  "description_len_max": 3435,
+  "vocab_sizes": {
+    "colors": 19,
+    "materials": 30,
+    "length": 3,
+    "size": 27
+  },
+  "weak_fill_train": {
+    "colors": 0.4441,
+    "materials": 0.4954,
+    "length": 0.0917,
+    "size": 0.0806
+  },
+  "weak_holdout_rows": 4535,
+  "slot_corr": {
+    "colors": {
+      "colors": 1.0,
+      "materials": 0.29,
+      "length": 0.071,
+      "size": 0.201
+    },
+    "materials": {
+      "colors": 0.29,
+      "materials": 1.0,
+      "length": 0.091,
+      "size": 0.212
+    },
+    "length": {
+      "colors": 0.071,
+      "materials": 0.091,
+      "length": 1.0,
+      "size": 0.078
+    },
+    "size": {
+      "colors": 0.201,
+      "materials": 0.212,
+      "length": 0.078,
+      "size": 1.0
+    }
+  },
+  "color_top": {
+    "Черный": 2939,
+    "Белый": 1505,
+    "Бежевый": 988,
+    "Коричневый": 958,
+    "Серый": 809,
+    "Голубой": 576,
+    "Розовый": 509,
+    "Серебряный": 505
+  }
+}

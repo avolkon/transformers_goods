@@ -1,0 +1,452 @@
+{
+  "weak_label_source": "gazetteer strict v2",
+  "holdout_docs": 4535,
+  "selection": "max holdout exact-match, then macro-F1",
+  "gazetteer_v2": {
+    "model": "gazetteer_v2",
+    "C": null,
+    "class_weight": null,
+    "holdout_exact_match": 1.0,
+    "macro_f1": 1.0,
+    "per_slot": {
+      "colors": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 2281,
+        "fp": 0,
+        "fn": 0
+      },
+      "materials": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 3637,
+        "fp": 0,
+        "fn": 0
+      },
+      "length": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 448,
+        "fp": 0,
+        "fn": 0
+      },
+      "size": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 457,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    "note": "weak labels are this gazetteer, so holdout F1 is 1 by construction"
+  },
+  "grid": [
+    {
+      "model": "logreg",
+      "C": null,
+      "alpha": 1e-05,
+      "class_weight": null,
+      "holdout_exact_match": 0.9607,
+      "macro_f1": 0.9658,
+      "per_slot": {
+        "colors": {
+          "precision": 0.9781,
+          "recall": 0.9978,
+          "f1": 0.9878,
+          "tp": 2276,
+          "fp": 51,
+          "fn": 5
+        },
+        "materials": {
+          "precision": 0.9953,
+          "recall": 0.9967,
+          "f1": 0.996,
+          "tp": 3625,
+          "fp": 17,
+          "fn": 12
+        },
+        "length": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 448,
+          "fp": 0,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.8189,
+          "recall": 0.9497,
+          "f1": 0.8794,
+          "tp": 434,
+          "fp": 96,
+          "fn": 23
+        }
+      },
+      "fit_seconds": 64.3
+    },
+    {
+      "model": "logreg",
+      "C": null,
+      "alpha": 1e-05,
+      "class_weight": "balanced",
+      "holdout_exact_match": 0.7766,
+      "macro_f1": 0.8899,
+      "per_slot": {
+        "colors": {
+          "precision": 0.8083,
+          "recall": 1.0,
+          "f1": 0.894,
+          "tp": 2281,
+          "fp": 541,
+          "fn": 0
+        },
+        "materials": {
+          "precision": 0.8947,
+          "recall": 0.9997,
+          "f1": 0.9443,
+          "tp": 3636,
+          "fp": 428,
+          "fn": 1
+        },
+        "length": {
+          "precision": 0.9978,
+          "recall": 1.0,
+          "f1": 0.9989,
+          "tp": 448,
+          "fp": 1,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.5666,
+          "recall": 0.9956,
+          "f1": 0.7222,
+          "tp": 455,
+          "fp": 348,
+          "fn": 2
+        }
+      },
+      "fit_seconds": 72.7
+    },
+    {
+      "model": "logreg",
+      "C": null,
+      "alpha": 0.0001,
+      "class_weight": null,
+      "holdout_exact_match": 0.9178,
+      "macro_f1": 0.9448,
+      "per_slot": {
+        "colors": {
+          "precision": 0.9707,
+          "recall": 0.9584,
+          "f1": 0.9645,
+          "tp": 2186,
+          "fp": 66,
+          "fn": 95
+        },
+        "materials": {
+          "precision": 0.9944,
+          "recall": 0.9736,
+          "f1": 0.9839,
+          "tp": 3541,
+          "fp": 20,
+          "fn": 96
+        },
+        "length": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 448,
+          "fp": 0,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.8509,
+          "recall": 0.8118,
+          "f1": 0.8309,
+          "tp": 371,
+          "fp": 65,
+          "fn": 86
+        }
+      },
+      "fit_seconds": 64.2
+    },
+    {
+      "model": "logreg",
+      "C": null,
+      "alpha": 0.0001,
+      "class_weight": "balanced",
+      "holdout_exact_match": 0.5901,
+      "macro_f1": 0.8224,
+      "per_slot": {
+        "colors": {
+          "precision": 0.6214,
+          "recall": 1.0,
+          "f1": 0.7665,
+          "tp": 2281,
+          "fp": 1390,
+          "fn": 0
+        },
+        "materials": {
+          "precision": 0.8324,
+          "recall": 0.9995,
+          "f1": 0.9083,
+          "tp": 3635,
+          "fp": 732,
+          "fn": 2
+        },
+        "length": {
+          "precision": 0.9978,
+          "recall": 1.0,
+          "f1": 0.9989,
+          "tp": 448,
+          "fp": 1,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.445,
+          "recall": 1.0,
+          "f1": 0.6159,
+          "tp": 457,
+          "fp": 570,
+          "fn": 0
+        }
+      },
+      "fit_seconds": 72.3
+    },
+    {
+      "model": "logreg",
+      "C": null,
+      "alpha": 0.001,
+      "class_weight": null,
+      "holdout_exact_match": 0.5907,
+      "macro_f1": 0.6749,
+      "per_slot": {
+        "colors": {
+          "precision": 0.9909,
+          "recall": 0.4779,
+          "f1": 0.6448,
+          "tp": 1090,
+          "fp": 10,
+          "fn": 1191
+        },
+        "materials": {
+          "precision": 0.9957,
+          "recall": 0.7011,
+          "f1": 0.8228,
+          "tp": 2550,
+          "fp": 11,
+          "fn": 1087
+        },
+        "length": {
+          "precision": 1.0,
+          "recall": 0.9665,
+          "f1": 0.983,
+          "tp": 433,
+          "fp": 0,
+          "fn": 15
+        },
+        "size": {
+          "precision": 1.0,
+          "recall": 0.1422,
+          "f1": 0.249,
+          "tp": 65,
+          "fp": 0,
+          "fn": 392
+        }
+      },
+      "fit_seconds": 64.7
+    },
+    {
+      "model": "logreg",
+      "C": null,
+      "alpha": 0.001,
+      "class_weight": "balanced",
+      "holdout_exact_match": 0.3707,
+      "macro_f1": 0.7621,
+      "per_slot": {
+        "colors": {
+          "precision": 0.4676,
+          "recall": 0.9991,
+          "f1": 0.637,
+          "tp": 2279,
+          "fp": 2595,
+          "fn": 2
+        },
+        "materials": {
+          "precision": 0.6804,
+          "recall": 1.0,
+          "f1": 0.8098,
+          "tp": 3637,
+          "fp": 1708,
+          "fn": 0
+        },
+        "length": {
+          "precision": 0.9978,
+          "recall": 1.0,
+          "f1": 0.9989,
+          "tp": 448,
+          "fp": 1,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.4315,
+          "recall": 1.0,
+          "f1": 0.6029,
+          "tp": 457,
+          "fp": 602,
+          "fn": 0
+        }
+      },
+      "fit_seconds": 81.5
+    },
+    {
+      "model": "linearsvc",
+      "C": 0.5,
+      "alpha": null,
+      "class_weight": null,
+      "holdout_exact_match": 0.9601,
+      "macro_f1": 0.9645,
+      "per_slot": {
+        "colors": {
+          "precision": 0.9735,
+          "recall": 1.0,
+          "f1": 0.9866,
+          "tp": 2281,
+          "fp": 62,
+          "fn": 0
+        },
+        "materials": {
+          "precision": 0.9959,
+          "recall": 0.9992,
+          "f1": 0.9975,
+          "tp": 3634,
+          "fp": 15,
+          "fn": 3
+        },
+        "length": {
+          "precision": 0.9956,
+          "recall": 1.0,
+          "f1": 0.9978,
+          "tp": 448,
+          "fp": 2,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.8055,
+          "recall": 0.9606,
+          "f1": 0.8762,
+          "tp": 439,
+          "fp": 106,
+          "fn": 18
+        }
+      },
+      "fit_seconds": 39.6
+    },
+    {
+      "model": "linearsvc",
+      "C": 1.0,
+      "alpha": null,
+      "class_weight": null,
+      "holdout_exact_match": 0.9612,
+      "macro_f1": 0.966,
+      "per_slot": {
+        "colors": {
+          "precision": 0.9752,
+          "recall": 1.0,
+          "f1": 0.9874,
+          "tp": 2281,
+          "fp": 58,
+          "fn": 0
+        },
+        "materials": {
+          "precision": 0.9956,
+          "recall": 0.9992,
+          "f1": 0.9974,
+          "tp": 3634,
+          "fp": 16,
+          "fn": 3
+        },
+        "length": {
+          "precision": 0.9956,
+          "recall": 1.0,
+          "f1": 0.9978,
+          "tp": 448,
+          "fp": 2,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.8145,
+          "recall": 0.9606,
+          "f1": 0.8815,
+          "tp": 439,
+          "fp": 100,
+          "fn": 18
+        }
+      },
+      "fit_seconds": 58.3
+    },
+    {
+      "model": "linearsvc",
+      "C": 2.0,
+      "alpha": null,
+      "class_weight": null,
+      "holdout_exact_match": 0.963,
+      "macro_f1": 0.9674,
+      "per_slot": {
+        "colors": {
+          "precision": 0.9773,
+          "recall": 1.0,
+          "f1": 0.9885,
+          "tp": 2281,
+          "fp": 53,
+          "fn": 0
+        },
+        "materials": {
+          "precision": 0.9956,
+          "recall": 0.9995,
+          "f1": 0.9975,
+          "tp": 3635,
+          "fp": 16,
+          "fn": 2
+        },
+        "length": {
+          "precision": 0.9956,
+          "recall": 1.0,
+          "f1": 0.9978,
+          "tp": 448,
+          "fp": 2,
+          "fn": 0
+        },
+        "size": {
+          "precision": 0.8233,
+          "recall": 0.9584,
+          "f1": 0.8857,
+          "tp": 438,
+          "fp": 94,
+          "fn": 19
+        }
+      },
+      "fit_seconds": 79.8
+    }
+  ],
+  "best": {
+    "model": "linearsvc",
+    "C": 2.0,
+    "class_weight": null,
+    "holdout_exact_match": 0.963,
+    "macro_f1": 0.9674
+  },
+  "default_logreg_C1": {
+    "holdout_exact_match": 0.9178,
+    "macro_f1": 0.9448
+  },
+  "test_rows_best_vs_default": 51,
+  "test_rows_best_vs_v2": 29,
+  "test_rows_default_vs_v2": 57,
+  "submission_changes_with_tuning": true,
+  "tuned_submission_equals_v2": false
+}
